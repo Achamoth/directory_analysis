@@ -1,6 +1,6 @@
 //
 //  NewDirs.c
-//  
+//
 //
 //  Created by Ammar Abu Shamleh on 24/08/2016.
 //
@@ -9,32 +9,96 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/syslimits.h>
 #include <dirent.h>
 #include <stdbool.h>
 #include <strings.h>
 
+void compareDirs();
 void compare(char **strings1, char **strings2, int len1, int len2);
 void freeMem(char **strings, int len);
+void parse(char *request);
+
+const char promptMessage[] = "Type 'help' to view a list of commands. Type 'quit' to exit";
+const char helpMessage[2][100] = {
+    "compare: list all files/directories found in first directory but not second",
+    "modified: list all files/directories found in directory that have been modified after specified date"
+};
+const int nCommands = 2;
 
 int main(int argc, char *argv[]) {
-    //Check to ensure correct number of arguments
-    if(argc != 3) {
-        printf("Error. Two directory names required\n");
-        exit(EXIT_FAILURE);
+    
+    //Main loop of program
+    while(true) {
+    //Ask user for request
+    printf("Type 'help' to view a list of commands. Type 'quit' to exit\n");
+    printf("Please enter the desired command : ");
+    
+    //Read and parse user request
+    char request[20];
+    scanf("%s", request);
+    parse(request);
     }
+    
+}
+
+//Parses user request and calls appropriate function. Returns false if command is invalid
+void parse(char *request) {
+    //User asks to quit
+    if(!strcmp(request, "quit")) {
+        printf("Goodbye\n");
+        exit(EXIT_SUCCESS);
+    }
+    
+    //User asks to compare 2 directories
+    else if(!strcmp(request, "compare")) {
+        compareDirs();
+        printf("\n\n");
+    }
+    
+    //User asks to list files in specified directory modified after specified date
+    else if(!strcmp(request, "modified")) {
+        //TODO
+    }
+    
+    //User asks for help
+    else if(!strcmp(request, "help")) {
+        printf("\n\n");
+        for(int i=0; i<nCommands; i++) {
+            printf("%s\n", helpMessage[i]);
+        }
+        printf("\n\n");
+    }
+    
+    //Invalid command
+    else {
+        printf("\nCommand not recognised. Please enter a valid command\n\n");
+    }
+}
+
+//Called when user requests to compare 2 directories
+void compareDirs() {
+    char dname1[PATH_MAX];
+    char dname2[PATH_MAX];
+    
+    //Ask user for directory names
+    printf("Please enter the first direcory name : ");
+    scanf("%s", dname1);
+    printf("Please enter the second directory name : ");
+    scanf("%s", dname2);
     
     //Store list of directory names for dir 1 and dir 2
     char **dir1Entries = (char **) malloc(sizeof(char *));
     char **dir2Entries = (char **) malloc(sizeof(char *));
     
-    //Attempt to open directory pointed to by argv[1]
+    //Attempt to open directory pointed to by dname1
     DIR *dp;
     struct dirent *ep;
     
-    dp = opendir(argv[1]);
+    dp = opendir(dname1);
     //If directory can't be opened, print error message
     if(dp == NULL) {
-        printf("Error. Directory %s couldn't be opened\n", argv[1]);
+        printf("Error. Directory %s couldn't be opened\n", dname1);
         exit(EXIT_FAILURE);
     }
     
@@ -45,12 +109,11 @@ int main(int argc, char *argv[]) {
         dir1Entries[nEntries++] = strdup(ep->d_name);
     }
     
-
-    //Attempt to open directory pointed to by argv[2]
-    dp = opendir(argv[2]);
+    //Attempt to open directory pointed to by dname2
+    dp = opendir(dname2);
     //If directory can't be opened, print error message
     if(dp == NULL) {
-        printf("Error. Directory %s couldn't be opened\n", argv[2]);
+        printf("Error. Directory %s couldn't be opened\n", dname2);
         exit(EXIT_FAILURE);
     }
     
@@ -62,14 +125,12 @@ int main(int argc, char *argv[]) {
     }
     
     //Print list of all directory names found in dir 1 and not dir 2
+    printf("\n\n");
     compare(dir1Entries, dir2Entries, nEntries, nEntries2);
     
     //Free allocated memory
     freeMem(dir1Entries, nEntries);
     freeMem(dir2Entries, nEntries2);
-    
-    //Exit successfully
-    exit(EXIT_SUCCESS);
 }
 
 //Print all string names found in strings1 and not strings2
