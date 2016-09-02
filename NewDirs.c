@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/syslimits.h>
+#include <time.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <stdbool.h>
 #include <strings.h>
@@ -18,6 +20,7 @@ void compareDirs();
 void compare(char **strings1, char **strings2, int len1, int len2);
 void freeMem(char **strings, int len);
 void parse(char *request);
+void findModified(char *dirName, int dayOfMonth, int month, int year);
 
 const char promptMessage[] = "Type 'help' to view a list of commands. Type 'quit' to exit";
 const char helpMessage[2][100] = {
@@ -58,7 +61,17 @@ void parse(char *request) {
     
     //User asks to list files in specified directory modified after specified date
     else if(!strcmp(request, "modified")) {
-        //TODO
+        //Ask user for directory name and
+        char dirName[PATH_MAX];
+        int day;
+        int month;
+        int year;
+        printf("Please enter the directory name : ");
+        scanf("%s", dirName);
+        printf("Please enter the date to be checked against (dd/mm/yyyy): ");
+        scanf("%d/%d/%d", &day, &month, &year);
+        findModified(dirName, day, month, year);
+        printf("\n\n");
     }
     
     //User asks for help
@@ -73,6 +86,49 @@ void parse(char *request) {
     //Invalid command
     else {
         printf("\nCommand not recognised. Please enter a valid command\n\n");
+    }
+}
+
+//Called when user requests to view all sub-directory names modified after certain date
+void findModified(char *dirName, int dayOfMonth, int month, int year) {
+    //Attempt to open directory pointed to by dirName
+    DIR *dp;
+    struct dirent *ep;
+    dp = opendir(dirName);
+    
+    //If directory can't be opened, print error message
+    if(dp == NULL) {
+        printf("Error. Directory %s couldn't be opened\n", dirName);
+        exit(EXIT_FAILURE);
+    }
+    
+    printf("\n\n");
+    
+    //Otherwise, read each entry in the directory
+    while( (ep = readdir(dp)) ) {
+        //Compute complete pathname for current entry
+        char curPathname[PATH_MAX + 256];
+        strcpy(curPathname, dirName);
+        char *fileName = ep -> d_name;
+        strcat(curPathname, fileName);
+        
+        //Find last modified time for file
+        struct stat attr;
+        stat(curPathname, &attr);
+        time_t lastModifiedTime = attr.st_mtime;
+        struct tm *lastModified = localtime(&lastModifiedTime);
+        
+        //Now compare last modified time to provided date
+        if(lastModified->tm_year > year-1900) {
+            //File modified after specified date; print filename
+            printf("%s\n", fileName);
+        }
+        else if(  (lastModified->tm_year == year-1900) && (lastModified->tm_mon > month-1) ) {
+            printf("%s\n", fileName);
+        }
+        else if(  (lastModified->tm_year == year-1900) && (lastModified->tm_mon == month-1) && (lastModified->tm_mday > dayOfMonth) ) {
+            printf("%s\n", fileName);
+        }
     }
 }
 
